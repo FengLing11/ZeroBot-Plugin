@@ -458,50 +458,97 @@ func init() {
 				}
 			}
 		}
-		upgradeNum := len(list)
-		favorLevel := 0
-		induceLevel := 0
-		for _, index := range list {
-			thingInfo := articles[index]
-			thingInfo.Number = 0
-			err = dbdata.updateUserThingInfo(uid, thingInfo)
-			if err != nil {
-				ctx.SendChain(message.Text("[ERROR at pole.go.12]:", err))
-				return
-			}
-			favorLevel += poles[index].Favor
-			induceLevel += poles[index].Induce
-		}
-		if rand.Intn(100) >= 90 {
-			ctx.Send(
-				message.ReplyWithMessage(ctx.Event.MessageID,
-					message.Text("合成失败,材料已销毁"),
-				),
-			)
-			return
-		}
-		attribute := strconv.Itoa(durationList[thingName]) + "/0/" + strconv.Itoa(induceLevel/upgradeNum) + "/" + strconv.Itoa(favorLevel/upgradeNum)
-		newthing := article{
-			Duration: time.Now().Unix(),
-			Type:     "pole",
-			Name:     thingName,
-			Number:   1,
-			Other:    attribute,
-		}
-		// 代码未对article.Number>1的情况做处理，直接生成多个Number=1的鱼竿
-		for i := 0; i < upgradeNum/3; i++ {
-			// 使用时间戳作为主键，增加固定值避免主键冲突
-			newthing.Duration += int64(i * 10)
-			err = dbdata.updateUserThingInfo(uid, newthing)
-			if err != nil {
-				ctx.SendChain(message.Text("[ERROR at pole.go.12]:", err))
-				return
-			}
-		}
-		ctx.Send(
-			message.ReplyWithMessage(ctx.Event.MessageID,
-				message.Text("成功合成：", upgradeNum/3, "个", thingName, "\n属性: ", attribute),
-			),
-		)
-	})
+        // --- 修改开始：分组独立判定合成成功率 ---
+    groupCount := len(list) / 3
+    successCount := 0
+    failCount := 0
+    successAttributes := []string{} // 存储成功鱼竿的属性描述
+
+    for g := 0; g < groupCount; g++ {
+        idx1 := list[g*3]
+        idx2 := list[g*3+1]
+        idx3 := list[g*3+2]
+
+        // 取出三个材料
+        thingInfo1 := articles[idx1]
+        thingInfo2 := articles[idx2]
+        thingInfo3 := articles[idx3]
+
+        // 删除材料（假设每个数量为1）
+        thingInfo1.Number = 0
+        thingInfo2.Number = 0
+        thingInfo3.Number = 0
+
+        // 更新数据库，删除这三个材料
+        err = dbdata.updateUserThingInfo(uid, thingInfo1)
+        if err != nil {
+            ctx.SendChain(message.Text("[ERROR at pole.go.12]:", err))
+            return
+        }
+        err = dbdata.updateUserThingInfo(uid, thingInfo2)
+        if err != nil {
+            ctx.SendChain(message.Text("[ERROR at pole.go.12]:", err))
+            return
+        }
+        err = dbdata.updateUserThingInfo(uid, thingInfo3)
+        if err != nil {
+            ctx.SendChain(message.Text("[ERROR at pole.go.12]:", err))
+            return
+        }
+
+        // 随机判定，成功率90%
+        if rand.Intn(100) >= 90 {
+            failCount++
+            continue
+        }
+
+        // 计算平均附魔等级
+        favorLevel := (poles[idx1].Favor + poles[idx2].Favor + poles[idx3].Favor) / 3
+        induceLevel := (poles[idx1].Induce + poles[idx2].Induce + poles[idx3].Induce) / 3
+        attribute := strconv.Itoa(durationList[thingName]) + "/0/" + strconv.Itoa(induceLevel) + "/" + strconv.Itoa(favorLevel)
+
+        // 生成合成后的鱼竿
+        newthing := article{
+            Duration: time.Now().Unix() + int64(g*10), // 加偏移避免主键冲突
+            Type:     "pole",
+            Name:     thingName,
+            Number:   1,
+            Other:    attribute,
+        }
+        err = dbdata.updateUserThingInfo(uid, newthing)
+        if err != nil {
+            ctx.SendChain(message.Text("[ERROR at pole.go.12]:", err))
+            return
+        }
+        successCount++
+        successAttributes = append(successAttributes, attribute)
+    }
+
+    // 构造结果消息
+    resultMsg := ""
+    if successCount > 0 {
+        resultMsg += "成功合成 " + strconv.Itoa(successCount) + " 个" + thingName + "\n"
+        // 显示属性，如果太多则只显示前几个
+        if len(successAttributes) <= 5 {
+            for _, attr := range successAttributes {
+                resultMsg += "属性: " + attr + "\n"
+            }
+        } else {
+            resultMsg += "属性示例: " + successAttributes[0] + " 等\n"
+        }
+    }
+    if failCount > 0 {
+        resultMsg += "失败 " + strconv.Itoa(failCount) + " 次，材料已销毁。"
+    }
+    if resultMsg == "" {
+        resultMsg = "没有进行任何合成？"
+    }
+
+    ctx.Send(
+        message.ReplyWithMessage(ctx.Event.MessageID,
+            message.Text(resultMsg),
+        ),
+    )
+    // --- 修改结束 ---
+})
 }
