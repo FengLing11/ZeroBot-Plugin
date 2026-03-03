@@ -57,7 +57,7 @@ func init() {
 		if err != nil {
 			ctx.SendChain(
 				message.Reply(ctx.Event.MessageID),
-				message.Text("[猜老婆] 磨砂图片生成失败:\n", err),
+				message.Text("[猜老婆] 图片生成失败:\n", err),
 			)
 			return
 		}
