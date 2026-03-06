@@ -502,7 +502,7 @@ func init() {
         attribute := strconv.Itoa(durationList[thingName]) + "/0/" + strconv.Itoa(induceLevel) + "/" + strconv.Itoa(favorLevel)
 
         newthing := article{
-            Duration: time.Now().Unix() + int64(g*10), // 加偏移避免主键冲突
+            Duration: time.Now().Unix() + int64(g*10), 
             Type:     "pole",
             Name:     thingName,
             Number:   1,
