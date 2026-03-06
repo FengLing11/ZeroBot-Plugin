@@ -33,7 +33,6 @@ func init() {
 
 		card := cards[rand.Intn(len(cards))]
 		
-		// --- 修改部分：增加图片加载的回退机制 ---
 		pic, err := engine.GetLazyData("wives/"+card, true)
 		if err != nil {
 			logrus.Warnf("[wife] 猜老婆图片同步失败: %v，尝试读取本地文件...", err)
