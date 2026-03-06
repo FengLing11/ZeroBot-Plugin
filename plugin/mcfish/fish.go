@@ -172,13 +172,10 @@ func init() {
 			return
 		}
 
-		// ================= [修复部分：创建局部概率副本] =================
-		// 原代码直接操作全局 probabilities，导致多人游戏时概率永久偏移。
 		localProbabilities := make(map[string]probabilityLimit, len(probabilities))
 		for k, v := range probabilities {
 			localProbabilities[k] = v
 		}
-		// =============================================================
 
 		if number > 100 || equipInfo.Equip == "美西螈" { // 放大概率
 			localProbabilities["treasure"] = probabilityLimit{
@@ -230,7 +227,6 @@ func init() {
 			number := 1
 			dice := rand.Intn(100)
 			switch {
-			// ================= [修复部分：所有结算均引用局部变量 localProbabilities] =================
 			case dice >= localProbabilities["waste"].Min && dice < localProbabilities["waste"].Max: // 垃圾
 				typeOfThing = "waste"
 				thingName = wasteList[rand.Intn(len(wasteList))]
@@ -304,7 +300,6 @@ func init() {
 			default:
 				thingNameList["赛博空气"]++
 			}
-			// ======================================================================================
 
 			if thingName != "" {
 				newThing := article{}
