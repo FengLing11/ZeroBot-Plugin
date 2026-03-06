@@ -25,7 +25,6 @@ var (
 		Brief:            "从老婆库抽每日老婆",
 		PublicDataFolder: "Wife",
 	}).ApplySingle(ctxext.DefaultSingle)
-    
 	getJSON = fcext.DoOnceOnSuccess(
 		func(ctx *zero.Ctx) bool {
 			data, err := engine.GetLazyData("wife.json", true)
@@ -37,7 +36,6 @@ var (
 					return false
 				}
 			}
-            
 			err = json.Unmarshal(data, &cards)
 			if err != nil {
 				ctx.SendChain(message.Text("ERROR: 老婆库格式解析失败: ", err))
