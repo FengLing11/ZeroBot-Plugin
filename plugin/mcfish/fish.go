@@ -300,7 +300,6 @@ func init() {
 			default:
 				thingNameList["赛博空气"]++
 			}
-
 			if thingName != "" {
 				newThing := article{}
 				if strings.Contains(thingName, "竿") {
