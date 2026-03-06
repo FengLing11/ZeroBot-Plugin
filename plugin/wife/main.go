@@ -28,14 +28,11 @@ var (
     
 	getJSON = fcext.DoOnceOnSuccess(
 		func(ctx *zero.Ctx) bool {
-			// 1. 优先尝试从镜像站更新同步
 			data, err := engine.GetLazyData("wife.json", true)
 			if err != nil {
-				// 2. 如果下载失败（如 MD5 不匹配），尝试直接读取本地已有文件
 				logrus.Warnf("[wife] 远程同步 wife.json 失败: %v，正在尝试读取本地缓存...", err)
 				data, err = engine.GetLazyData("wife.json", false)
 				if err != nil {
-					// 3. 本地也没有或读取失败才彻底报错
 					ctx.SendChain(message.Text("ERROR: 无法获取老婆库数据（同步及本地读取均失败）: ", err))
 					return false
 				}
@@ -65,7 +62,6 @@ func init() {
 	engine.OnFullMatch("抽老婆", getJSON).SetBlock(true).
 		Handle(func(ctx *zero.Ctx) {
 			card := cards[fcext.RandSenderPerDayN(ctx.Event.UserID, len(cards))]
-			// 图片获取同样可以考虑增加非强制下载逻辑，但通常图片 MD5 报错较少
 			data, err := engine.GetLazyData("wives/"+card, true)
 			var msgText string
 			work, name := card2name(card)
