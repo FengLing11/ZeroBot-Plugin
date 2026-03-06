@@ -32,7 +32,6 @@ func init() {
 		class := 3
 
 		card := cards[rand.Intn(len(cards))]
-		
 		pic, err := engine.GetLazyData("wives/"+card, true)
 		if err != nil {
 			logrus.Warnf("[wife] 猜老婆图片同步失败: %v，尝试读取本地文件...", err)
@@ -42,8 +41,6 @@ func init() {
 				return
 			}
 		}
-		// ------------------------------------
-
 		work, name := card2name(card)
 		name = strings.ToLower(name)
 		img, _, err := image.Decode(bytes.NewReader(pic))
