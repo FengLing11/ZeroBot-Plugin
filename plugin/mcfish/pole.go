@@ -458,87 +458,71 @@ func init() {
 				}
 			}
 		}
-    groupCount := len(list) / 3
-    successCount := 0
-    failCount := 0
-    successAttributes := []string{} 
+		upgradeNum := len(list)
+		if upgradeNum == 0 || upgradeNum%3 != 0 {
+			ctx.SendChain(message.At(uid), message.Text("❌ 合成失败：材料数量必须是 3 的倍数（当前选择了 ", upgradeNum, " 个）"))
+			return
+		}
 
-    for g := 0; g < groupCount; g++ {
-        idx1 := list[g*3]
-        idx2 := list[g*3+1]
-        idx3 := list[g*3+2]
+		groupCount := upgradeNum / 3
+		var successCount, failCount int
+		var reportDetails []string
 
-        thingInfo1 := articles[idx1]
-        thingInfo2 := articles[idx2]
-        thingInfo3 := articles[idx3]
+		baseTime := time.Now().Unix()
 
-        thingInfo1.Number = 0
-        thingInfo2.Number = 0
-        thingInfo3.Number = 0
+		for g := 0; g < groupCount; g++ {
+			var groupInduce, groupFavor int
 
-        err = dbdata.updateUserThingInfo(uid, thingInfo1)
-        if err != nil {
-            ctx.SendChain(message.Text("[ERROR at pole.go.12]:", err))
-            return
-        }
-        err = dbdata.updateUserThingInfo(uid, thingInfo2)
-        if err != nil {
-            ctx.SendChain(message.Text("[ERROR at pole.go.12]:", err))
-            return
-        }
-        err = dbdata.updateUserThingInfo(uid, thingInfo3)
-        if err != nil {
-            ctx.SendChain(message.Text("[ERROR at pole.go.12]:", err))
-            return
-        }
+			for i := 0; i < 3; i++ {
+				idx := list[g*3+i]
+				thingInfo := articles[idx]
+				thingInfo.Number = 0
+				_ = dbdata.updateUserThingInfo(uid, thingInfo) 
+				
+				groupInduce += poles[idx].Induce
+				groupFavor += poles[idx].Favor
+			}
 
-        if rand.Intn(100) >= 90 {
-            failCount++
-            continue
-        }
+			if rand.Intn(100) >= 90 {
+				failCount++
+				continue
+			}
 
-        favorLevel := (poles[idx1].Favor + poles[idx2].Favor + poles[idx3].Favor) / 3
-        induceLevel := (poles[idx1].Induce + poles[idx2].Induce + poles[idx3].Induce) / 3
-        attribute := strconv.Itoa(durationList[thingName]) + "/0/" + strconv.Itoa(induceLevel) + "/" + strconv.Itoa(favorLevel)
+			successCount++
+			avgInduce := groupInduce / 3
+			avgFavor := groupFavor / 3
+			attribute := strconv.Itoa(durationList[thingName]) + "/0/" + strconv.Itoa(avgInduce) + "/" + strconv.Itoa(avgFavor)
+			
+			newthing := article{
+				Duration: baseTime + int64(g*10) + int64(rand.Intn(100)), 
+				Type:     "pole",
+				Name:     thingName,
+				Number:   1,
+				Other:    attribute,
+			}
+			
+			err = dbdata.updateUserThingInfo(uid, newthing)
+			if err != nil {
+				failCount++
+				continue
+			}
 
-        newthing := article{
-            Duration: time.Now().Unix() + int64(g*10), 
-            Type:     "pole",
-            Name:     thingName,
-            Number:   1,
-            Other:    attribute,
-        }
-        err = dbdata.updateUserThingInfo(uid, newthing)
-        if err != nil {
-            ctx.SendChain(message.Text("[ERROR at pole.go.12]:", err))
-            return
-        }
-        successCount++
-        successAttributes = append(successAttributes, attribute)
-    }
+			if successCount <= 5 {
+				reportDetails = append(reportDetails, "✨ 第 "+strconv.Itoa(successCount)+" 支: [诱钓"+strconv.Itoa(avgInduce)+" 海眷"+strconv.Itoa(avgFavor)+"]")
+			}
+		}
 
-    resultMsg := ""
-    if successCount > 0 {
-        resultMsg += "成功合成 " + strconv.Itoa(successCount) + " 个" + thingName + "\n"
-        if len(successAttributes) <= 5 {
-            for _, attr := range successAttributes {
-                resultMsg += "属性: " + attr + "\n"
-            }
-        } else {
-            resultMsg += "属性示例: " + successAttributes[0] + " 等\n"
-        }
-    }
-    if failCount > 0 {
-        resultMsg += "失败 " + strconv.Itoa(failCount) + " 次，材料已销毁。"
-    }
-    if resultMsg == "" {
-        resultMsg = "没有进行任何合成？"
-    }
+finalReport := " 合成报告 \n"
+		finalReport += "消耗材料: " + strconv.Itoa(upgradeNum) + " 个\n"
+		finalReport += "成功产出: " + strconv.Itoa(successCount) + " 支 | 失败: " + strconv.Itoa(failCount) + " 组\n"
+		
+		if successCount > 0 {
+			finalReport += "----\n" + strings.Join(reportDetails, "\n")
+			if successCount > 5 {
+				finalReport += "\n...以及其余 " + strconv.Itoa(successCount-5) + " 支属性已略过"
+			}
+		}
 
-    ctx.Send(
-        message.ReplyWithMessage(ctx.Event.MessageID,
-            message.Text(resultMsg),
-        ),
-    )
-})
+		ctx.Send(message.ReplyWithMessage(ctx.Event.MessageID, message.Text(strings.TrimSpace(finalReport))))
+	})
 }
